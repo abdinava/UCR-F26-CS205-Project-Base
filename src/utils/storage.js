@@ -15,10 +15,13 @@ export function loadData() {
   } catch (error) {
     console.error('Error loading from localStorage:', error)
   }
-  return {
+    return {
     moodEntries: [],
+    sleepEntries: [],
+    activityEntries: [],
   }
 }
+
 
 export function saveData(moodEntries, sleepEntries, activityEntries) {
   try {
