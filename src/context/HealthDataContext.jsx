@@ -6,6 +6,8 @@ const HealthDataContext = createContext()
 
 export function HealthDataProvider({ children }) {
   const [moodEntries, setMoodEntries] = useState([])
+  const [sleepEntries, setSleepEntries] = useState([])
+  const [activityEntries, setActivityEntries] = useState([])  
   const [isLoaded, setIsLoaded] = useState(false)
   const [fileHandle, setFileHandle] = useState(null)
   const [fileStatus, setFileStatus] = useState('none') // 'none', 'saving', 'saved', 'error'
@@ -17,6 +19,8 @@ export function HealthDataProvider({ children }) {
       // Load from localStorage first
       const loaded = loadData()
       setMoodEntries(loaded.moodEntries)
+      setSleepEntries(loaded.sleepEntries)
+      setActivityEntries(loaded.activityEntries)
       setIsLoaded(true)
       
       // Try to set up file auto-save
@@ -31,13 +35,19 @@ export function HealthDataProvider({ children }) {
           const fileData = await readFile(handle)
           if (fileData?.moodEntries) {
             const fileDate = fileData.lastSaved ? new Date(fileData.lastSaved) : null
-            const storageDate = loaded.moodEntries.length > 0 
-              ? new Date(Math.max(...loaded.moodEntries.map(e => e.id))) 
+            const storageDate = loaded.moodEntries.length > 0
+              ? new Date(Math.max(...loaded.moodEntries.map(e => e.id)))
               : null
-            
+
             if (!storageDate || (fileDate && fileDate > storageDate)) {
+              const sleep = fileData.sleepEntries || []
+              const activities = fileData.activityEntries || []
+
               setMoodEntries(fileData.moodEntries)
-              saveData(fileData.moodEntries)
+              setSleepEntries(sleep)
+              setActivityEntries(activities)
+
+              saveData(fileData.moodEntries, sleep, activities)
             }
           }
         }
@@ -60,12 +70,12 @@ export function HealthDataProvider({ children }) {
   }, [])
 
   // Auto-save to localStorage and file when data changes
-  useEffect(() => {
-    if (isLoaded) {
-      saveData(moodEntries)
-      saveToFile()
-    }
-  }, [moodEntries, isLoaded])
+ useEffect(() => {
+  if (isLoaded) {
+    saveData(moodEntries, sleepEntries, activityEntries)
+    saveToFile()
+  }
+}, [moodEntries, sleepEntries, activityEntries, isLoaded])
 
   async function saveToFile() {
     const handle = fileHandleRef.current
@@ -74,6 +84,8 @@ export function HealthDataProvider({ children }) {
     setFileStatus('saving')
     const success = await writeFile(handle, {
       moodEntries,
+      sleepEntries,
+      activityEntries,
       lastSaved: new Date().toISOString()
     })
     
@@ -107,29 +119,40 @@ export function HealthDataProvider({ children }) {
       
       const data = await readFile(handle)
       if (data?.moodEntries) {
+        const sleep = data.sleepEntries || []
+        const activities = data.activityEntries || []
+
         setMoodEntries(data.moodEntries)
-        saveData(data.moodEntries)
+        setSleepEntries(sleep)
+        setActivityEntries(activities)
+
+        saveData(data.moodEntries, sleep, activities)
         return true
       }
     }
     return false
   }
 
-  const addMoodEntry = (entry) => {
-    setMoodEntries([...moodEntries, entry])
-  }
+ const addMoodEntry = (entry) => setMoodEntries(entries => [...entries, entry])
+  const deleteMoodEntry = (id) => setMoodEntries(entries => entries.filter(entry => entry.id !== id))
 
-  const deleteMoodEntry = (id) => {
-    setMoodEntries(moodEntries.filter(entry => entry.id !== id))
-  }
+  const addSleepEntry = (entry) => setSleepEntries(entries => [...entries, entry])
+  const deleteSleepEntry = (id) => setSleepEntries(entries => entries.filter(entry => entry.id !== id))
 
-  const setAllData = (moodEntries) => {
-    setMoodEntries(moodEntries)
+  const addActivityEntry = (entry) => setActivityEntries(entries => [...entries, entry])
+  const deleteActivityEntry = (id) => setActivityEntries(entries => entries.filter(entry => entry.id !== id))
+
+  const setAllData = (data) => {
+    setMoodEntries(data.moodEntries || [])
+    setSleepEntries(data.sleepEntries || [])
+    setActivityEntries(data.activityEntries || [])
   }
 
   const exportData = () => {
     const data = {
       moodEntries,
+      sleepEntries,
+      activityEntries,
       exportedAt: new Date().toISOString(),
     }
     return JSON.stringify(data, null, 2)
@@ -138,10 +161,16 @@ export function HealthDataProvider({ children }) {
   const importData = (jsonString) => {
     try {
       const data = JSON.parse(jsonString)
-      if (data.moodEntries && Array.isArray(data.moodEntries)) {
-        setAllData(data.moodEntries)
+
+      if (
+        Array.isArray(data.moodEntries) &&
+        Array.isArray(data.sleepEntries || []) &&
+        Array.isArray(data.activityEntries || [])
+      ) {
+        setAllData(data)
         return true
       }
+
       return false
     } catch (error) {
       console.error('Error importing data:', error)
@@ -155,6 +184,12 @@ export function HealthDataProvider({ children }) {
         moodEntries,
         addMoodEntry,
         deleteMoodEntry,
+        sleepEntries,
+        addSleepEntry,
+        deleteSleepEntry,
+        activityEntries,
+        addActivityEntry,
+        deleteActivityEntry,
         exportData,
         importData,
         setAllData,
