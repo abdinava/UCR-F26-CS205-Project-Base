@@ -99,6 +99,9 @@ import ActivityGraphs from './components/ActivityGraphs'
 import HistoryView from './components/HistoryView'
 import FileManager from './components/FileManager'
 
+import InsightsView from './components/InsightsView'
+
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [darkMode, setDarkMode] = useState(
@@ -138,9 +141,10 @@ function App() {
             <nav className="flex space-x-8 overflow-x-auto">
               {[
                 ['dashboard', 'Dashboard'],
-                ['history', 'History'],
                 ['sleep', 'Sleep'],
                 ['activities', 'Activities'],
+                ['insights', 'Insights'],
+                ['history', 'History'],
                 ['data', 'Data Management']
               ].map(([tab, label]) => (
                 <button
@@ -169,6 +173,7 @@ function App() {
           )}
 
           {activeTab === 'history' && <HistoryView />}
+          {activeTab === 'insights' && <InsightsView />}
           {activeTab === 'sleep' && <SleepTracker />}
           {activeTab === 'activities' && <ActivitiesTracker />}
           {activeTab === 'data' && <FileManager />}

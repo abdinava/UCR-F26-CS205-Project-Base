@@ -111,6 +111,10 @@ body {
   background-color: #991b1b;
 }
 
+.dark .text-indigo-700 {
+  color: #c7d2fe;
+}
+
 /* Charts */
 
 .dark .recharts-cartesian-grid line {
